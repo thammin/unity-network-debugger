@@ -12,27 +12,39 @@ namespace UnityNetworkDebugger
 {
     public class Main
     {
-        private static readonly string BetwixtDownloadPath = "https://github.com/thammin/betwixt/releases/download/2.0.0/Betwixt-darwin-x64.zip";
-
-        private static string HomePath { get; } = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-
-        private static string LibraryPath { get; } = $"{HomePath}/Library/UnityNetworkDebugger";
-
-        private static string ZipFileName
+        private static string BetwixtVersion = "1.6.1";
+        private static string OSString
         {
             get
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                {
-                    return "Betwixt-darwin-x64.zip";
-                }
-                return "";
+                string arch = Environment.Is64BitOperatingSystem ? "x64" : "ia32";
+                string os = "";
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) os = "darwin";
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) os = "win32";
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) os = "linux";
+
+                return $"{os}-{arch}";
             }
         }
 
-        private static string ZipFilePath { get; } = $"{LibraryPath}/{ZipFileName}";
+        private static string BetwixtDownloadPath = $"https://github.com/kdzwinel/betwixt/releases/download/{BetwixtVersion}/Betwixt-{OSString}.zip";
 
-        private static string ApplicationPath { get; } = $"{LibraryPath}/Betwixt.app";
+        private static string HomePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+        private static string LibraryPath = $"{HomePath}/Library/UnityNetworkDebugger";
+
+        private static string ZipFilePath = $"{LibraryPath}/Betwixt-{OSString}.zip";
+
+        private static string ApplicationPath
+        {
+            get
+            {
+                string ext = "";
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) ext = ".app";
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) ext = ".exe";
+                return $"{LibraryPath}/Betwixt-{OSString}/Betwixt{ext}";
+            }
+        }
 
 #if UNITY_EDITOR
         [MenuItem("Tools/Network Debugger")]
@@ -43,14 +55,23 @@ namespace UnityNetworkDebugger
             Exec("open", ApplicationPath);
         }
 
-        public static void DownloadBetwixt()
+        private static void DownloadBetwixt()
         {
-            if (!Directory.Exists(ApplicationPath))
+            if (!hasApplication())
             {
                 Exec("wget", $"{BetwixtDownloadPath} -P {LibraryPath}");
                 Exec("unzip", $"{ZipFilePath} -d {LibraryPath}");
                 Exec("rm", $"-rf {ZipFilePath}");
             }
+        }
+
+        private static bool hasApplication()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return Directory.Exists(ApplicationPath);
+            }
+            return File.Exists(ApplicationPath);
         }
 
         private static void Exec(string fileName, string arguments)
