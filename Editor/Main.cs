@@ -45,7 +45,7 @@ namespace UnityNetworkDebugger
 
         public static void DownloadBetwixt()
         {
-            if (!File.Exists(ApplicationPath))
+            if (!Directory.Exists(ApplicationPath))
             {
                 Exec("wget", $"{BetwixtDownloadPath} -P {LibraryPath}");
                 Exec("unzip", $"{ZipFilePath} -d {LibraryPath}");
