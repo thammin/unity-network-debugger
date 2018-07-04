@@ -1,5 +1,0 @@
-#test
-
-```sh
-dotnet run
-```

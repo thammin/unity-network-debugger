@@ -1,12 +1,11 @@
 ﻿using System;
 using System.IO;
+using System.Net;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
-#if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
-#endif
 
 namespace UnityNetworkDebugger
 {
@@ -46,23 +45,43 @@ namespace UnityNetworkDebugger
             }
         }
 
-#if UNITY_EDITOR
         [MenuItem("Tools/Network Debugger")]
-#endif
-        public static void OpenNetworkDebugger()
+        public static async void OpenNetworkDebugger()
         {
-            DownloadBetwixt();
+            await DownloadBetwixt();
             Exec("open", ApplicationPath);
         }
 
-        private static void DownloadBetwixt()
+        private static Task<bool> DownloadBetwixt()
         {
+            TaskCompletionSource<bool> promise = new TaskCompletionSource<bool>();
             if (!hasApplication())
             {
-                Exec("wget", $"{BetwixtDownloadPath} -P {LibraryPath}");
-                Exec("unzip", $"{ZipFilePath} -d {LibraryPath}");
-                Exec("rm", $"-rf {ZipFilePath}");
+                using (WebClient wc = new WebClient())
+                {
+                    wc.DownloadProgressChanged += (sender, e) =>
+                    {
+                        EditorUtility.DisplayCancelableProgressBar(
+                            "Network Debugger",
+                            "Downloading... This will take few minutes.",
+                            (float)e.ProgressPercentage / 100
+                        );
+                    };
+                    wc.DownloadFileCompleted += (sender, e) =>
+                    {
+                        Exec("unzip", $"{ZipFilePath} -d {LibraryPath}");
+                        Exec("rm", $"-rf {ZipFilePath}");
+                        EditorUtility.ClearProgressBar();
+                        promise.SetResult(true);
+                    };
+                    wc.DownloadFileAsync(new System.Uri(BetwixtDownloadPath), ZipFilePath);
+                }
             }
+            else
+            {
+                promise.SetResult(true);
+            }
+            return promise.Task;
         }
 
         private static bool hasApplication()
